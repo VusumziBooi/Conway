@@ -2,6 +2,7 @@
 #include<vector>
 #include<utility>
 #include<fstream>
+#include<mpi.h>
 
 using namespace  std;
 int rSIZE , cSIZE;
