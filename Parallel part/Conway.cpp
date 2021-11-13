@@ -88,11 +88,9 @@ struct Conway{
         return neighbours;
     }
 
-    vector<vector<int>> nextLife(vector<vector<int>> &mylist , int rank , int iterations , int increment){
+    vector<vector<int>> nextLife(vector<vector<int>> &mylist , int start , int stop){
         this->board = mylist;
-        int counter = 0;
-        int i = rank;
-        while(counter < iterations){
+        for(int i = start ; i < stop ; i++){
             for(int j = 0 ; j < cSIZE ; j++){
                 int curr = board[i][j];
                 if(isAlive(i , j)){
@@ -135,10 +133,7 @@ struct Conway{
                     }
                 }
             }
-            i+=increment;
-            counter ++;
         }
-        MPI_Barrier(MPI_COMM_WORLD);
         board = copy;
         return board;
     }
@@ -154,11 +149,34 @@ void printBoard(vector<vector<int>> mylist){
         space = "";
         cout << endl;
     }
+
+    cout << "-----------------------------------------------------------------------"<<endl;
 }
 
-int main(int &argc , char *argv[]){
-        int r , c , input , gen , num_procs , myrank;
-        vector<vector<int>> mylist;        
+void altervector(vector<vector<int>> &mylist , string all){
+    int m = 0;
+    for(int i = 0 ; i < rSIZE ; i++){
+        for(int j = 0 ; j < cSIZE ; j++){
+            mylist[i][j] = all.at(m);
+            m++;
+        }
+    }
+}
+int main(int argc , char *argv[]){
+        int r , c , input , gen , num_procs , myrank , iterations , start ,stop;
+        vector<vector<int>> mylist = {
+                                        {0,0,0,0,1,0,0,0,1,0},
+                                        {0,0,1,0,0,1,1,1,0,0},
+                                        {0,0,1,1,1,0,0,0,1,0},
+                                        {1,1,0,0,0,1,0,1,1,1},
+                                        {0,1,1,0,0,1,1,0,0,0},
+                                        {1,0,0,0,0,0,0,0,0,0},
+                                        {0,0,1,0,0,0,0,0,0,0},
+                                        {0,1,1,0,0,0,1,0,0,0},
+                                        {0,0,0,0,1,0,0,0,0,0},
+                                        {0,0,0,0,1,1,1,0,1,0}
+                                        };
+        string all = "";        
 
         MPI_Init(&argc , &argv);
 
@@ -166,6 +184,7 @@ int main(int &argc , char *argv[]){
         MPI_Comm_rank(MPI_COMM_WORLD , &myrank);
 
         if(myrank == 0){
+            mylist.clear();
             cout << "Please insert the dimensions of your game \n";
             cin >> r >>c;
             cout << "Please enter your initial state \n";         
@@ -174,38 +193,49 @@ int main(int &argc , char *argv[]){
                 for(int j = 0 ; j < c ; j++){
                     cin>>input;
                     temp.push_back(input);
+                    all+=to_string(input);
+                    
                 }
                 mylist.push_back(temp);
             }
-            rSIZE = mylist.size();
-            cSIZE = mylist[0].size();
             cout << "Please enter the number of generations you want to explore \n";
             cin >> gen;
             rSIZE = r;
             cSIZE = c;
-        }
+            cout << endl;
 
+        }
+         
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&rSIZE , 1, MPI_INT , 0 ,MPI_COMM_WORLD);
+        MPI_Bcast(&cSIZE , 1, MPI_INT , 0 ,MPI_COMM_WORLD);
+        MPI_Bcast(&gen , 1, MPI_INT , 0 ,MPI_COMM_WORLD);
         
 
-        Conway game(mylist);
-        if(myrank == 0){
-            cout << endl;
+        iterations = (int)rSIZE/num_procs*1.0;
+        start = myrank * iterations;
+        if(rSIZE % num_procs != 0){//last process will do extra job
+            if(myrank == num_procs-1){
+                iterations = rSIZE - iterations*(num_procs-1);
+            }
         }
-
-        int iterations = (int)rSIZE/num_procs*1.0;
-        int increment = num_procs;
-
-        /*vector<vector<int>>myVector = game.nextLife(mylist , myrank , iterations , increment);
-        if(myrank == 0){
-            cout << "Generation " << 1 << " results are : \n";
+        stop = start + iterations;
+    
+        Conway game(mylist);
+        
+        vector<vector<int>>myVector = game.nextLife(mylist , start , stop);
+        if(myrank == 1){
+            cout << "Generation 1 results are:  "<<endl;
             printBoard(myVector);
-            cout << "-----------------------------------------------------------------------"<<endl;
-            mylist = myVector;
-        }*/
-
+        }
+        mylist = myVector;
+        MPI_Barrier(MPI_COMM_WORLD);
     
 
+        MPI_Finalize();
+
         
+
 
 
     return 0;
