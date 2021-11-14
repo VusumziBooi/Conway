@@ -7,6 +7,8 @@
 using namespace  std;
 int rSIZE , cSIZE;
 
+ofstream MyFile("parallel_output.txt");
+
 struct Conway{ 
     vector<vector<int>>board;
     vector<vector<int>>copy;
@@ -143,17 +145,19 @@ void printBoard(vector<vector<int>> mylist){
     string space = "";
     for(int i = 0 ; i < mylist.size();i++){
         for(int j = 0 ; j < mylist[0].size();j++){
-            cout << space << mylist[i][j];
+            MyFile << space << mylist[i][j];
             space = " ";
         }
         space = "";
-        cout << endl;
+        MyFile <<endl;
     }
+    MyFile << "-----------------------------------------------------------------------"<<endl;
 
 }
 
 int main(int argc , char *argv[]){
         int r , c , input , gen , num_procs , myrank , iterations , start ,stop , last;
+        double start_time , elapsed_time;
         vector<vector<int>> mylist ;     
 
         MPI_Init(&argc , &argv);
@@ -203,7 +207,7 @@ int main(int argc , char *argv[]){
             }
         }
         stop = start + iterations;
-    
+        start_time = MPI_Wtime();
         Conway game(mylist);
         for(int z = 1 ; z <= gen ; z++){
 
@@ -224,12 +228,16 @@ int main(int argc , char *argv[]){
             MPI_Barrier(MPI_COMM_WORLD);
 
             if(myrank == 0){
-                cout << endl;
-                cout << "Generation "<< z<< " results are:  "<<endl;
+                MyFile << "Generation "<< z<< " results are:  "<<endl;
                 printBoard(mylist);
-                cout << "-----------------------------------------------------------------------"<<endl;
             }
 
+        }
+        elapsed_time = MPI_Wtime() - start_time;
+        if(myrank == 0){
+            cout << "Success! , operation took "<< elapsed_time << " seconds to finish" << endl;
+            MyFile << "Success! , operation took "<< elapsed_time << " seconds" << endl;
+            cout << "Please check \"parallel_output.txt\" for the results of your game \n";
         }
         
         

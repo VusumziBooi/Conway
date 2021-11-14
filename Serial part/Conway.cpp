@@ -2,9 +2,12 @@
 #include<vector>
 #include<utility>
 #include<fstream>
+#include <chrono>
 
 using namespace  std;
 int rSIZE , cSIZE;
+
+ofstream MyFile("serial_output.txt");
 
 struct Conway{ 
     vector<vector<int>>board;
@@ -142,12 +145,13 @@ void printBoard(vector<vector<int>> mylist){
     string space = "";
     for(int i = 0 ; i < mylist.size();i++){
         for(int j = 0 ; j < mylist[0].size();j++){
-            cout << space << mylist[i][j];
+            MyFile << space << mylist[i][j];
             space = " ";
         }
         space = "";
-        cout << endl;
+        MyFile <<endl;
     }
+    MyFile << "-----------------------------------------------------------------------"<<endl;
 }
 int main(){
 
@@ -171,15 +175,19 @@ int main(){
         cSIZE = mylist[0].size();
         cout << "Please enter the number of generations you want to explore \n";
         cin >> gen;
+        auto start_time = std::chrono::high_resolution_clock::now();
         for(int i  = 1 ; i <= gen ; i++){
             Conway game(mylist);
-            cout << endl;
-            cout << "Generation "<< i << " results are:  "<<endl;
+            MyFile << "Generation "<< i << " results are:  "<<endl;
             vector<vector<int>>myVector = game.nextLife(mylist);
             printBoard(myVector);
-            cout << "-----------------------------------------------------------------------"<<endl;
             mylist = myVector;
         }
+        auto stop_time = std::chrono::high_resolution_clock::now();
+        chrono::duration<float> elapsed_time = stop_time - start_time;
+        cout << "Success! , operation took "<< elapsed_time.count()<< " seconds to finish" << endl;
+        MyFile << "Success! , operation took "<< elapsed_time.count()<< " seconds to finish" << endl;
+        cout << "Please check \"serial_output.txt\" for the results of your game \n";
         
 
 
