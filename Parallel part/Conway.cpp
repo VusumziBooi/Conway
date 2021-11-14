@@ -150,33 +150,11 @@ void printBoard(vector<vector<int>> mylist){
         cout << endl;
     }
 
-    cout << "-----------------------------------------------------------------------"<<endl;
 }
 
-void altervector(vector<vector<int>> &mylist , string all){
-    int m = 0;
-    for(int i = 0 ; i < rSIZE ; i++){
-        for(int j = 0 ; j < cSIZE ; j++){
-            mylist[i][j] = all.at(m);
-            m++;
-        }
-    }
-}
 int main(int argc , char *argv[]){
-        int r , c , input , gen , num_procs , myrank , iterations , start ,stop;
-        vector<vector<int>> mylist = {
-                                        {0,0,0,0,1,0,0,0,1,0},
-                                        {0,0,1,0,0,1,1,1,0,0},
-                                        {0,0,1,1,1,0,0,0,1,0},
-                                        {1,1,0,0,0,1,0,1,1,1},
-                                        {0,1,1,0,0,1,1,0,0,0},
-                                        {1,0,0,0,0,0,0,0,0,0},
-                                        {0,0,1,0,0,0,0,0,0,0},
-                                        {0,1,1,0,0,0,1,0,0,0},
-                                        {0,0,0,0,1,0,0,0,0,0},
-                                        {0,0,0,0,1,1,1,0,1,0}
-                                        };
-        string all = "";        
+        int r , c , input , gen , num_procs , myrank , iterations , start ,stop , last;
+        vector<vector<int>> mylist ;     
 
         MPI_Init(&argc , &argv);
 
@@ -193,7 +171,6 @@ int main(int argc , char *argv[]){
                 for(int j = 0 ; j < c ; j++){
                     cin>>input;
                     temp.push_back(input);
-                    all+=to_string(input);
                     
                 }
                 mylist.push_back(temp);
@@ -202,7 +179,6 @@ int main(int argc , char *argv[]){
             cin >> gen;
             rSIZE = r;
             cSIZE = c;
-            cout << endl;
 
         }
          
@@ -210,6 +186,12 @@ int main(int argc , char *argv[]){
         MPI_Bcast(&rSIZE , 1, MPI_INT , 0 ,MPI_COMM_WORLD);
         MPI_Bcast(&cSIZE , 1, MPI_INT , 0 ,MPI_COMM_WORLD);
         MPI_Bcast(&gen , 1, MPI_INT , 0 ,MPI_COMM_WORLD);
+        mylist.resize(rSIZE , vector<int>(cSIZE));
+        for(int i = 0 ; i < rSIZE ; i++){
+            MPI_Bcast(&mylist[i][0] , cSIZE, MPI_INT , 0 ,MPI_COMM_WORLD);
+        }
+        
+        
         
 
         iterations = (int)rSIZE/num_procs*1.0;
@@ -217,19 +199,41 @@ int main(int argc , char *argv[]){
         if(rSIZE % num_procs != 0){//last process will do extra job
             if(myrank == num_procs-1){
                 iterations = rSIZE - iterations*(num_procs-1);
+                last = iterations;
             }
         }
         stop = start + iterations;
     
         Conway game(mylist);
-        
-        vector<vector<int>>myVector = game.nextLife(mylist , start , stop);
-        if(myrank == 1){
-            cout << "Generation 1 results are:  "<<endl;
-            printBoard(myVector);
+        for(int z = 1 ; z <= gen ; z++){
+
+            vector<vector<int>>myVector = game.nextLife(mylist , start , stop);
+            mylist = myVector;
+            int row = 0;
+            for(int i = 0 ; i < num_procs ;i++){//for each process
+                int counter = 0;
+                while(counter < iterations){
+                    MPI_Bcast(&mylist[row][0] , cSIZE, MPI_INT , i ,MPI_COMM_WORLD);
+                    counter++;
+                    row++;
+                }
+            }
+            
+
+            
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            if(myrank == 0){
+                cout << endl;
+                cout << "Generation "<< z<< " results are:  "<<endl;
+                printBoard(mylist);
+                cout << "-----------------------------------------------------------------------"<<endl;
+            }
+
         }
-        mylist = myVector;
-        MPI_Barrier(MPI_COMM_WORLD);
+        
+        
+
     
 
         MPI_Finalize();

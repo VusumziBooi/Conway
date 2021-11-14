@@ -171,10 +171,10 @@ int main(){
         cSIZE = mylist[0].size();
         cout << "Please enter the number of generations you want to explore \n";
         cin >> gen;
-        for(int i  = 0 ; i < gen ; i++){
+        for(int i  = 1 ; i <= gen ; i++){
             Conway game(mylist);
             cout << endl;
-            cout << "Generation " << i+1 << " results are : \n";
+            cout << "Generation "<< i << " results are:  "<<endl;
             vector<vector<int>>myVector = game.nextLife(mylist);
             printBoard(myVector);
             cout << "-----------------------------------------------------------------------"<<endl;
